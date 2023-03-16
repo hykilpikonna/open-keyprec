@@ -1,0 +1,68 @@
+doc = App.activeDocument()
+
+# Get the base object (C2)
+# Naming format: <note>-<object-type>
+c2 = doc.getObjectsByLabel('C2-Base')[0]
+
+# Create a list of notes from C2 to C7
+notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+notes = [f"{k}{str(oct)}" for oct in range(2, 8) for k in notes]
+notes = notes[notes.index("C2"):notes.index("C7") + 1]
+non_sharp = [note for note in notes if "#" not in note]
+
+MIN_WIDTH = 78
+MAX_WIDTH = 194
+
+
+# Calculate position offset for a note
+def calc_pos_offset(note: str):
+    is_sharp = "#" in note
+
+    # Find the index of the note in the list of non-sharp notes
+    note_index = non_sharp.index(note.replace("#", ""))
+
+    # If it's a sharp note, place it in between the note and the previous note
+    if is_sharp:
+        note_index += 0.5
+
+    # Calculate the offset
+    return 37 * note_index
+
+
+# Loop through C#2 to C7
+for i, note in enumerate(notes):
+    if i == 0:
+        continue
+
+    is_sharp = "#" in note
+
+    # Create a copy of the base object
+    copy: list[fc.Part] = list(doc.copyObject(c2, True, True))
+
+    # Since freecad will automatically name the copy ORIGINAL001, we need to rename it
+    for obj in copy:
+        obj.Label = obj.Label.replace('C2', note).replace("001", "")
+
+    def find_ends_with(label: str) -> fc.Part:
+        return [obj for obj in copy if obj.Label.endswith(label)][0]
+
+    # Find the objects by label
+    base, cube, hole = [find_ends_with(label) for label in ["Base", "Cube", "Hole"]]
+
+    # Make the cube wider
+    # width = MIN_WIDTH + (MAX_WIDTH - MIN_WIDTH) * ((len(notes) - i) / len(notes))
+    x = len(notes) - i - 1
+    # Calculate width with a quadratic function 0.022172619047619x^2 + 0.60297619047619x + 78
+    width = 0.016592261904762 * x ** 2 + 0.93779761904762 * x + 78
+    cube.Width = fc.Units.Quantity(f"{width} mm")
+
+    # The hole's y placement should be width - width / 4.2
+    plac: list[float] = list(hole.Placement.Base)
+    plac[1] = width - width / 4.2
+    hole.Placement.Base = App.Vector(*plac)
+
+    # Move the base object. For sharp notes, move it to the top
+    y = MAX_WIDTH - 6 if is_sharp else MAX_WIDTH - width
+    base.Placement.move(App.Vector(calc_pos_offset(note), y, 0))
+
+    doc.recompute()
