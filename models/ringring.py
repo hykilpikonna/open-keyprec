@@ -22,19 +22,14 @@ def say(msg: str):
     os.system(f"say '{msg}'")
 
 
-# Create a webhook endpoint
 @app.post('/webhook')
 async def webhook(request: fastapi.Request):
-    # log.info(f"Request: {request}")
-    # log.info(f"Request Headers: {request.headers}")
-    # log.info(f"Request Query: {request.query_params}")
-
     # Get the JSON body
     obj = await request.json()
     prog = obj.get('Progress')
     if prog == 100:
         # Make a noise
-        say('Meow Meow Meow! Print Complete, Print Complete, Meow Meow Meow Meow Meow!')
+        say('Meow Meow Meow! Meow Meow Meow Meow Meow!')
 
     elif obj.get("EventType") == 6:
         say(f"{obj.get('PrinterName')} Progress: {prog}%")
