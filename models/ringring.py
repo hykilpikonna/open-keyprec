@@ -18,6 +18,10 @@ log = logging.getLogger("rich")
 app = fastapi.FastAPI()
 
 
+def say(msg: str):
+    os.system(f"say '{msg}'")
+
+
 # Create a webhook endpoint
 @app.post('/webhook')
 async def webhook(request: fastapi.Request):
@@ -27,9 +31,13 @@ async def webhook(request: fastapi.Request):
 
     # Get the JSON body
     obj = await request.json()
-    if obj.get('Progress') == 100:
+    prog = obj.get('Progress')
+    if prog == 100:
         # Make a noise
-        os.system("say 'Meow Meow Meow! Print Complete, Print Complete, Meow Meow Meow Meow Meow!'")
+        say('Meow Meow Meow! Print Complete, Print Complete, Meow Meow Meow Meow Meow!')
+
+    elif obj.get("EventType") == 6:
+        say(f"{obj.get('PrinterName')} Progress: {prog}%")
 
     log.info(obj)
 
