@@ -92,7 +92,7 @@ void loop()
     u64 time = timeMillis();
     u64 elapsed = time - start_time;
 
-    Serial.printf("%" PRIu64 "=============\r\n", elapsed);
+//    Serial.printf("%" PRIu64 "=============\r\n", elapsed);
 
     // Loop through each multiplexer state
     for (int i = 0; i < PINS_PER_MUX; i++)
