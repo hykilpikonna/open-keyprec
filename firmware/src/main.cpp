@@ -30,9 +30,9 @@ const Note notes[] = {
 
 // 4 Multiplexers: GPIO pins for each analog multiplexer that handles 16 sensors
 // Notes are connected in order: Mux #1 (0-15), Mux #2 (16-31), Mux #3 (32-47), Mux #4 (48-61)
-const int NUM_MUX = 4;
-const int PINS_PER_MUX = 16;
-const int mux_in[] = {35, 34, 36, 39};  // Analog signal input
+const int NUM_MUX = 5;
+const int PINS_PER_MUX = 12;
+const int mux_in[] = {34, 34, 35, 34, 34};  // Analog signal input
 // Select pins for every multiplexer, each multiplexer has 4 select pins, all sel0 are connected to 14, etc.
 const int NUM_MUX_SEL = 4;
 const int mux_sel[4] = {14, 27, 16, 17};
@@ -41,8 +41,8 @@ int lasts[NUM_NOTES];  // variable to store the value coming from the sensor
 u64 last_hit_times[NUM_NOTES];
 
 int max_sensor = 4096;
-int max_threshold = 700;
-int active_threshold = 400;  // Minimum value to be considered as a hit
+int max_threshold = 2000;
+int active_threshold = 100;  // Minimum value to be considered as a hit
 
 void setup()
 {
@@ -115,7 +115,7 @@ void loop()
             if (v != lasts[note_id])
             {
                 // Serial prints are really slow, so don't use them in debug mode
-                // Serial.printf("#%d %d\r\n", note_id, v);
+                 Serial.printf("%s %d\r\n", notes[note_id].name, v);
                 on_sensor_update(note_id, time, lasts[note_id], v);
             }
             lasts[note_id] = v;
