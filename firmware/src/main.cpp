@@ -7,14 +7,35 @@
 // Configuration
 // ========================================
 
-// 4 Multiplexers: GPIO pins for each analog multiplexer that handles 16 sensors
-// Notes are connected in order: Mux #1 (0-15), Mux #2 (16-31), Mux #3 (32-47), Mux #4 (48-61)
+// 4 1:16 Multiplexers: GPIO pins for each analog multiplexer that handles 12 sensors of an octave
+// Notes are connected in order: Mux #1 (0-11), Mux #2 (12-23), Mux #3 (24-35), Mux #4 (36-47), Mux #5 (48-59)
 const int NUM_MUX = 5;
 const int PINS_PER_MUX = 12;
-const int mux_in[] = {34, 34, 35, 34, 34};  // Analog signal input
+const int MUX_IN[NUM_MUX] = {34, 34, 35, 34, 34};  // Analog signal input
+
 // Select pins for every multiplexer, each multiplexer has 4 select pins, all sel0 are connected to 14, etc.
 const int NUM_MUX_SEL = 4;
-const int mux_sel[4] = {14, 27, 16, 17};
+const int MUX_SEL_OUT[NUM_MUX_SEL] = {14, 27, 16, 17};
+
+// 3 1:8 Multiplexers for the midi panel
+const int P_NUM_MUX = 3;
+const int P_PINS_PER_MUX = 8;
+const int P_BUTTON_MUX_IN[P_NUM_MUX] = {-1, -1};  // Digital signal inputs for button multiplexers
+const int P_KNOB_MUX_IN = -1;  // Analog signal inputs for potentiometer
+
+// Select pins for every multiplexer, each multiplexer has 3 select pins
+const int P_NUM_MUX_SEL = 3;
+const int P_MUX_SEL_OUT[P_NUM_MUX_SEL] = {-1, -1, -1};
+
+// Rotary encoder pins
+const int P_NUM_ROTARY = 4;
+const int P_ROTARY_A[P_NUM_ROTARY] = {-1, -1, -1, -1};
+const int P_ROTARY_B[P_NUM_ROTARY] = {-1, -1, -1, -1};
+
+// LED light strips
+const int P_LED_BTN = -1;
+const int P_LED_KNOB = -1;
+const int P_LED_ROTARY = -1;
 
 // ========================================
 // Code
@@ -48,8 +69,8 @@ val active_threshold = 100;  // Minimum value to be considered as a hit
 void setup()
 {
     // Initialize pin and serial
-    for (int pin: mux_in) pinMode(pin, INPUT);
-    for (int pin: mux_sel) pinMode(pin, OUTPUT);
+    for (int pin: MUX_IN) pinMode(pin, INPUT);
+    for (int pin: MUX_SEL_OUT) pinMode(pin, OUTPUT);
     Serial.begin(9600);
     Serial.printf("Initialized\r\n");
 
@@ -98,7 +119,7 @@ void loop()
         for (int j = 0; j < NUM_MUX_SEL; j++)
         {
             // i >> j is the jth bit of i
-            digitalWrite(mux_sel[j], (i >> j) & 1);
+            digitalWrite(MUX_SEL_OUT[j], (i >> j) & 1);
         }
 
         // Read four input pins from the multiplexer
@@ -108,7 +129,7 @@ void loop()
             if (note_id >= NUM_NOTES) break;
 
             // Read the analog input
-            int v = analogRead(mux_in[j]);
+            int v = analogRead(MUX_IN[j]);
             if (v != lasts[note_id])
             {
                 // Serial prints are really slow, so don't use them in debug mode
