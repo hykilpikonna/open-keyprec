@@ -20,14 +20,14 @@
 
 Open-KeyPrec is an open-sourced, pressure-sensitive electric keyboard percussion (mallet) MIDI instrument. It has 61 keys, spanning 5 octaves of playing range from C2 to C7 like a standard Marimba. It also has a MIDI control panel with 16 buttons, 12 knobs (8 × 280° potentiometers and 4 × 360° rotary encoders).
 
-The sensors are controlled by an ESP32 development board, and the output is converted into a standard MIDI device. You can use audio workstation softwares like GarageBand or Reaper (or open-source alternatives like LMMS, Zrythm, or Ardour) to simulate the sounds of all kinds of different instruments.
+The sensors are controlled by a development board, and the output is converted into a standard MIDI device. You can use audio workstation softwares like GarageBand or Reaper (or open-source alternatives like LMMS, Zrythm, or Ardour) to simulate the sounds of all kinds of different instruments.
 
 ## Code
 
 **Source code structure**
 
 * `/src` - PC driver written in Rust
-* `/firmware` - ESP32 module firmware written in C++
+* `/firmware` - Development board firmware written in C++
 * `/circuits` - Printed circuit boards
 * `/models` - 3D-printable models
 
