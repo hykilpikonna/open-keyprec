@@ -69,7 +69,25 @@ Total GPIO required: 23
 
 ### 1. Order PCBs
 
-!!!!!!!!!! TODO !!!!!!!!!!
+I ordered my PCBs from JLC, but any PCB service would work. They should accept the exported Gerber zip files in `circuits/Exports` folder.
+
+I created two circuit boards for this keyboard, one is the multiplexer ([Mux v2.zip](circuits/Mux%20v2.zip)) which uses the CD74HC4067 1:16 multiplexer ic to convert the 61 separate analog inputs requirement into only 5 analog inputs and 4 digital switch outputs. 
+It also haso diodes and resistors for voltage protection. The other pcb ([OKP-Panel-SMT.zip](circuits/OKP-Panel-SMT.zip)) is for the MIDI control panel containing the buttons and knobs.
+
+1. Go to jlcpcb.com (Or jlc.com if you read Chinese)
+2. Upload the Gerber file
+3. Set parameters: FR-4, 2 Layers, Color, leave default for other options
+
+**PCB Assembly (SMT)**
+
+If you're not comfortable soldering small SMD components, you can order PCB Assembly from JLC. 
+You can also select which parts you would like to SMT based on your soldering abilities. 
+For example, in the Mux pcb, I ordered SMT for only the 0603 Zener diodes and the CD74HC4067 ic, and hand-soldered everything else.
+
+1. Order "PCB Assembly" (SMT) and click confirm
+2. In the SMT menu, upload the BOM and CPL (PickAndPlace) files
+3. After uploading, remove the parts you want to manually solder (they're pretty expensive, since someone in the factory still have to manually solder them for you)
+4. Order manually-soldered parts somewhere else (e.g. szlcsc.com)
 
 ## Usage
 
