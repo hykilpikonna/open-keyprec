@@ -73,6 +73,14 @@ Total GPIO required: 23
 
 ## Usage
 
+### Flash Firmware
+
+1. Install PlatformIO Core ([Guide](https://platformio.org/install/cli))
+2. Open the `firmware` directory
+3. In your preferred IDE, edit `src/config.h` with your pin configuration.
+4. Edit `platformio.ini` to match your dev board.
+5. Connect dev board, build and upload firmware using `platformio run --target upload`
+
 ### Setup MIDI Device
 
 !!!!!!!!!! TODO !!!!!!!!!!
