@@ -38,6 +38,22 @@ The sensors are controlled by an ESP32 development board, and the output is conv
 * CLion: IDE for Rust & C++
 * PlatformIO: Firmware development toolkit
 
+**Pin Configuration**
+
+| Pins | I/O (A: Analog) | Name |
+| --- | --- | --- |
+| 4 | O | Mux Select for C2-B6 |
+| 5 | IA | Mux Input for C2-B6 |
+| 1 | IA | Input for C7 |
+| 8 | I | (Panel) Input for 4 rotary encoders |
+| 3 | O | Mux Select for buttons and potentiometers |
+| 2 | I | Mux Input for buttons |
+| 1 | IA | Mux Input for potentiometers |
+| 3 | O | RGB LED Control |
+
+Total ADC channels required: 7
+Total GPIO required: 23
+
 ## Build
 
 ### Materials Required
