@@ -4,6 +4,8 @@
 #include "macros.h"
 #include "config.h"
 
+#include "stm32f4xx_hal.h"
+
 // ========================================
 // Code
 // ========================================
@@ -26,15 +28,19 @@ const Note notes[] = {
     {"C7", 96}
 };
 
-int lasts[NUM_NOTES];  // variable to store the value coming from the sensor
+u32 lasts[NUM_NOTES];  // variable to store the value coming from the sensor
 u64 last_hit_times[NUM_NOTES];
 
 val max_sensor = 4096;
 val max_threshold = 2000;
 val active_threshold = 100;  // Minimum value to be considered as a hit
 
+let led_refresh_on = false;
+
 void setup()
 {
+    HAL_Init();
+
     // Initialize pin and serial
     for (int pin: MUX_IN) pinMode(pin, INPUT);
     for (int pin: MUX_SEL_OUT) pinMode(pin, OUTPUT);
@@ -49,7 +55,7 @@ void setup()
  *
  * @param id Sensor index
  */
-void on_sensor_update(int id, u64 time, int last, int current)
+void on_sensor_update(int id, u64 time, u32 last, u32 current)
 {
     // If the last value is larger than the current value, check timeout
     if (last > current && last > active_threshold)
@@ -77,6 +83,8 @@ void loop()
     u64 time = timeMillis();
     u64 elapsed = time - start_time;
 
+    // Toggle LED refresh indicator
+    digitalWrite(LED_REFRESH, led_refresh_on = !led_refresh_on);
 //    Serial.printf("%" PRIu64 "=============\r\n", elapsed);
 
     // Loop through each multiplexer state
@@ -96,11 +104,11 @@ void loop()
             if (note_id >= NUM_NOTES) break;
 
             // Read the analog input
-            int v = analogRead(MUX_IN[j]);
+            u32 v = analogRead(MUX_IN[j]);
             if (v != lasts[note_id])
             {
                 // Serial prints are really slow, so don't use them in debug mode
-                 Serial.printf("%s %d\r\n", notes[note_id].name, v);
+                Serial.printf("%s %d\r\n", notes[note_id].name, v);
                 on_sensor_update(note_id, time, lasts[note_id], v);
             }
             lasts[note_id] = v;

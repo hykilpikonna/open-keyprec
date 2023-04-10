@@ -1,19 +1,24 @@
 #ifndef FIRMWARE_CONFIG_H
 #define FIRMWARE_CONFIG_H
 
+#include "stm32f4xx_hal.h"
+
 // ========================================
-// Configuration
+// Pin Configuration
 // ========================================
+
+// LED indicator for pulling update
+const int LED_REFRESH = PA13;
 
 // 4 1:16 Multiplexers: GPIO pins for each analog multiplexer that handles 12 sensors of an octave
 // Notes are connected in order: Mux #1 (0-11), Mux #2 (12-23), Mux #3 (24-35), Mux #4 (36-47), Mux #5 (48-59)
 const int NUM_MUX = 5;
 const int PINS_PER_MUX = 12;
-const int MUX_IN[NUM_MUX] = {34, 34, 35, 34, 34};  // Analog signal input
+const int MUX_IN[NUM_MUX] = {PA0, PA1, PA2, PA3, PA4};  // Analog signal input
 
 // Select pins for every multiplexer, each multiplexer has 4 select pins, all sel0 are connected to 14, etc.
 const int NUM_MUX_SEL = 4;
-const int MUX_SEL_OUT[NUM_MUX_SEL] = {14, 27, 16, 17};
+const int MUX_SEL_OUT[NUM_MUX_SEL] = {PB4, PB5, PB6, PB7};
 
 // 3 1:8 Multiplexers for the midi panel
 const int P_NUM_MUX = 3;
