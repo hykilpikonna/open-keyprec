@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <chrono>
 #include <cinttypes>
-//#include <driver/adc.h>
+#include <driver/adc.h>
 
 #define u8 uint8_t
 #define u16 uint16_t
@@ -32,15 +32,15 @@ const Note notes[] = {
 };
 
 // LED pins
-val PIN_LED = 8;
+val PIN_LED = 37;
 let led_state = true;
 
 // 5 Multiplexers: GPIO pins for each analog multiplexer that handles 12 sensors (1 octave)
 // Notes are connected in order: Mux #1 (0-11), Mux #2 (12-23), Mux #3 (24-35), Mux #4 (36-47), Mux #5 (48-59)
 val NUM_MUX = 5;
 val PINS_PER_MUX = 12;
-//const adc1_channel_t mux_in[] = {ADC1_CHANNEL_0, ADC1_CHANNEL_1, ADC1_CHANNEL_2, ADC1_CHANNEL_3, ADC1_CHANNEL_4};
-const int mux_in[] = {A0, A1, A2, A3, A4};
+const adc1_channel_t mux_in[] = {ADC1_CHANNEL_1, ADC1_CHANNEL_2, ADC1_CHANNEL_3, ADC1_CHANNEL_4, ADC1_CHANNEL_5};
+//const int mux_in[] = {A0, A1, A2, A3, A4};
 
 // Select pins for every multiplexer, each multiplexer has 4 select pins, all sel0 are connected to 14, etc.
 val NUM_MUX_SEL = 4;
@@ -64,12 +64,12 @@ void setup()
 
     // Initialize pin and serial
     for (int pin: mux_in) pinMode(pin, INPUT);
-//    adc1_config_width(ADC_WIDTH_MAX);
-//    for (val pin : mux_in) {
-////        adcAttachPin(pin);
-//        adc1_config_channel_atten(pin, ADC_ATTEN_DB_11);
-//    }
-    for (val pin: mux_sel) pinMode(pin, OUTPUT);
+    adc1_config_width(ADC_WIDTH_MAX);
+    for (val pin : mux_in) {
+        adcAttachPin(pin);
+        adc1_config_channel_atten(pin, ADC_ATTEN_DB_11);
+    }
+//    for (val pin: mux_sel) pinMode(pin, OUTPUT);
     Serial.begin(9600);
     Serial.println("Initialized");
 
@@ -96,7 +96,7 @@ void on_sensor_update(int id, u64 time, int last, int current)
         // The last value is a local maximum,
         // and we read it as the hit strength of our note. Send midi command to the host.
         // /hit <note> <velocity>
-        printf("/hit %d %d\r\n", notes[id].midi,
+        Serial.printf("/hit %d %d\r\n", notes[id].midi,
                       min((last - active_threshold) * 127 / (max_threshold - active_threshold), 127));
 
         // Update last hit time
@@ -127,12 +127,13 @@ void loop()
     // Toggle LED
     led_state = !led_state;
     digitalWrite(PIN_LED, led_state);
+    delay(100);
 
 //    // Loop through each multiplexer input
     for (val mux : mux_in)
     {
         val v = read_sensor(mux);
-        printf("%d ", v);
+        Serial.printf("%d ", v);
     }
     Serial.println();
 
