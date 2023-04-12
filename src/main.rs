@@ -10,7 +10,7 @@ fn start() -> Result<()> {
     let midi_out = MidiOutput::new("MIDI Output")?;
     let mut conn_out = midi_out.create_virtual("Virtual MIDI Output").unwrap();
 
-    let serial_port = serialport::new("/dev/cu.usbserial-142140", 9600)
+    let serial_port = serialport::new("/dev/cu.wchusbserial1450", 9600)
         .timeout(std::time::Duration::from_millis(10))
         .open()?;
     let mut reader = BufReader::new(serial_port);

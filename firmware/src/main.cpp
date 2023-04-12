@@ -34,13 +34,29 @@ val active_threshold = 100;  // Minimum value to be considered as a hit
 
 let led_refresh_on = false;
 
+void pinModeSafe(int pin, int mode)
+{
+    if (pin == -1) return;
+    pinMode(pin, mode);
+}
+
 void setup()
 {
+    // Initialize pins
+    pinModeSafe(LED_REFRESH, OUTPUT);
+    for (int pin: MUX_IN) pinModeSafe(pin, INPUT);
+    for (int pin: MUX_SEL_OUT) pinModeSafe(pin, OUTPUT);
+    for (int pin: P_BUTTON_MUX_IN) pinModeSafe(pin, INPUT);
+    for (int pin: P_MUX_SEL_OUT) pinModeSafe(pin, OUTPUT);
+    for (int pin: P_ROTARY_A) pinModeSafe(pin, INPUT);
+    for (int pin: P_ROTARY_B) pinModeSafe(pin, INPUT);
+    pinModeSafe(P_KNOB_MUX_IN, INPUT);
+    pinModeSafe(P_LED_BTN, OUTPUT);
+    pinModeSafe(P_LED_KNOB, OUTPUT);
+    pinModeSafe(P_LED_ROTARY, OUTPUT);
 
-    // Initialize pin and serial
-    for (int pin: MUX_IN) pinMode(pin, INPUT);
-    for (int pin: MUX_SEL_OUT) pinMode(pin, OUTPUT);
-    Serial.begin(9600);
+    // Initialize serial
+    Serial.begin(921600);
     Serial.printf("Initialized\r\n");
 
     start_time = timeMillis();
