@@ -2,14 +2,18 @@
 #include <chrono>
 #include "macros.h"
 #include "config.h"
+#include "Adafruit_NeoPixel.h"
+#include "Encoder.h"
 
 // ========================================
 // Code
 // ========================================
 
 u64 start_time = 0;
+u64 last_refresh_time = 0;
 
-typedef struct note {
+typedef struct note
+{
     char name[4];
     u16 midi;
 } Note;
@@ -28,9 +32,9 @@ const Note notes[] = {
 u32 lasts[NUM_NOTES];  // variable to store the value coming from the sensor
 u64 last_hit_times[NUM_NOTES];
 
-val max_sensor = 4096;
-val max_threshold = 2000;
-val active_threshold = 100;  // Minimum value to be considered as a hit
+let max_sensor = 4096;
+let max_threshold = 2000;
+let active_threshold = 100;  // Minimum value to be considered as a hit
 
 let led_refresh_on = false;
 
@@ -40,26 +44,55 @@ void pinModeSafe(int pin, int mode)
     pinMode(pin, mode);
 }
 
+Adafruit_NeoPixel p_led_key(4, P_LED_KEY, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel p_led_knob(9, P_LED_KNOB, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel p_led_rotary(9, P_LED_ROTARY, NEO_GRB + NEO_KHZ800);
+
+u64 fps_time_counter = 0;
+u32 fps_updates = 0;
+u32 fps_interval_ms = 1000;
+
+u16 last_hue = 0;
+u8 brightness = 40;
+
+bool key_states[P_PINS_PER_MUX];
+bool btn_states[P_PINS_PER_MUX];
+u32 pot_states[P_PINS_PER_MUX];
+
+Encoder *encoders[P_NUM_ROTARY];
+int encoder_states[P_NUM_ROTARY];
+
 void setup()
 {
     // Initialize pins
     pinModeSafe(LED_REFRESH, OUTPUT);
     for (int pin: MUX_IN) pinModeSafe(pin, INPUT);
     for (int pin: MUX_SEL_OUT) pinModeSafe(pin, OUTPUT);
-    for (int pin: P_BUTTON_MUX_IN) pinModeSafe(pin, INPUT);
     for (int pin: P_MUX_SEL_OUT) pinModeSafe(pin, OUTPUT);
     for (int pin: P_ROTARY_A) pinModeSafe(pin, INPUT);
     for (int pin: P_ROTARY_B) pinModeSafe(pin, INPUT);
+    pinModeSafe(P_BUTTON_MUX_IN, INPUT);
+    pinModeSafe(P_KEY_MUX_IN, INPUT);
     pinModeSafe(P_KNOB_MUX_IN, INPUT);
-    pinModeSafe(P_LED_BTN, OUTPUT);
+    pinModeSafe(P_LED_KEY, OUTPUT);
     pinModeSafe(P_LED_KNOB, OUTPUT);
     pinModeSafe(P_LED_ROTARY, OUTPUT);
 
+    // Initialize encoders
+    for (int i = 0; i < P_NUM_ROTARY; i++)
+    {
+        encoders[i] = new Encoder(P_ROTARY_A[i], P_ROTARY_B[i]);
+    }
+
     // Initialize serial
-    Serial.begin(921600);
+    Serial.begin(9600);
     Serial.printf("Initialized\r\n");
 
     start_time = timeMillis();
+
+    p_led_key.begin();
+    p_led_knob.begin();
+    p_led_rotary.begin();
 }
 
 /**
@@ -90,55 +123,178 @@ void on_sensor_update(int id, u64 time, u32 last, u32 current)
     }
 }
 
-u64 fps_time_counter = 0;
-u32 fps_updates = 0;
-u32 fps_interval_ms = 1000;
+void onKey(int id, bool state)
+{
+    // Check if it's one of the larger keys (the first 4)
+    if (id < 4)
+    {
+        if (state)
+        {
+            // Set a random color for the key's LED
+            p_led_key.setPixelColor(id, Adafruit_NeoPixel::ColorHSV(random(0, 65535), 255, brightness));
+            p_led_key.show();
+        }
+        else
+        {
+            // Clear the key's LED
+            p_led_key.setPixelColor(id, 0);
+            p_led_key.show();
+        }
+    }
+
+    // Key 5 = clear
+    if (id == 4 && state)
+    {
+        p_led_key.clear();
+        p_led_key.show();
+    }
+
+    Serial.printf("Key changed - id: %d, state: %d\r\n", id, state);
+}
+
+void onBtn(int id, bool state)
+{
+    Serial.printf("Button changed - id: %d, state: %d\r\n", id, state);
+}
+
+void onPotRead(int id, u8 value)
+{
+    // Set LED
+    p_led_knob.setPixelColor(id, Adafruit_NeoPixel::ColorHSV(last_hue, 255, value));
+    p_led_knob.show();
+}
+
+void onPotChange(int id, u8 value)
+{
+    Serial.printf("Potentiometer changed - id: %d, value: %d\r\n", id, value);
+}
+
+int multisampleRead(int pin, int samples)
+{
+    int sum = 0;
+    for (int i = 0; i < samples; ++i)
+    {
+        sum += analogRead(pin);
+    }
+    return (int) round(((double) sum) / samples);
+}
 
 void loop()
 {
-    u64 time = timeMillis();
-    u64 elapsed = time - start_time;
+    const auto hue_interval = 512;
+    last_hue += hue_interval;
 
-    // Report FPS every second
-    fps_time_counter += elapsed;
-    fps_updates++;
-    if (fps_time_counter >= fps_interval_ms)
+    // Read rotary encoders
+    for (int i = 0; i < P_NUM_ROTARY; ++i)
     {
-        fps_time_counter -= fps_interval_ms;
-        double fps = 1.0 * fps_updates / fps_interval_ms * 1000;
-        Serial.printf("FPS: %.2f\r\n", fps);
+        int state = encoders[i]->read();
+        if (encoder_states[i] != state)
+        {
+            encoder_states[i] = state;
+            Serial.printf("Rotary changed - id: %d, value: %d\r\n", i, state);
+            p_led_rotary.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue, 255, brightness));
+            p_led_rotary.show();
+        }
     }
 
-    // Toggle LED refresh indicator
-    digitalWrite(LED_REFRESH, led_refresh_on = !led_refresh_on);
-//    Serial.printf("%" PRIu64 "=============\r\n", elapsed);
-
-    // Loop through each multiplexer state
-    for (int i = 0; i < PINS_PER_MUX; i++)
+    // Read buttons
+    for (int i = 0; i < P_PINS_PER_MUX; ++i)
     {
         // Set select pins
-        for (int j = 0; j < NUM_MUX_SEL; j++)
+        for (int j = 0; j < P_NUM_MUX_SEL; ++j)
         {
             // i >> j is the jth bit of i
-            digitalWrite(MUX_SEL_OUT[j], (i >> j) & 1);
+            digitalWrite(P_MUX_SEL_OUT[j], (i >> j) & 1);
+        }
+        delay(1);
+
+        // Read button
+        int key = !digitalRead(P_KEY_MUX_IN);
+        int btn = !digitalRead(P_BUTTON_MUX_IN);
+
+        // If the state is changed, call button callback
+        if (key_states[i] != key)
+        {
+            key_states[i] = key;
+            onKey(i, key);
         }
 
-        // Read four input pins from the multiplexer
-        for (int j = 0; j < NUM_MUX; j++)
+        if (btn_states[i] != btn)
         {
-            int note_id = j * PINS_PER_MUX + i;
-            if (note_id >= NUM_NOTES) break;
+            btn_states[i] = btn;
+            onBtn(i, btn);
+        }
 
-            // Read the analog input
-            u32 v = analogRead(MUX_IN[j]);
-            if (v != lasts[note_id])
-            {
-                // Serial prints are really slow, so don't use them in debug mode
-                Serial.printf("%s %d\r\n", notes[note_id].name, v);
-                on_sensor_update(note_id, time, lasts[note_id], v);
-            }
-            lasts[note_id] = v;
+        // Read potentiometer
+        int pot = (int) round(multisampleRead(P_KNOB_MUX_IN, 2) / 16.0);
+        onPotRead(i, pot);
+
+        // If the state is changed, call potentiometer callback
+        if (abs(pot_states[i] - pot) > 4)
+        {
+            pot_states[i] = pot;
+            onPotChange(i, pot);
         }
     }
-//    Serial.printf("Loop %" PRIu64 "\r\n", elapsed);
+
+//    for (int i = 0; i < 9; i++)
+//    {
+//        p_led_key.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue + i * hue_interval, 255, brightness));
+//        p_led_knob.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue + 16384 + i * hue_interval, 255, brightness));
+//        p_led_rotary.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue + 32768 + i * hue_interval, 255, brightness));
+//    }
+
+    delay(10);
+    p_led_key.show();
+    p_led_knob.show();
+    p_led_rotary.show();
 }
+
+//void loop()
+//{
+//    u64 time = timeMillis();
+//    u64 elapsed = time - last_refresh_time;
+//    last_refresh_time = time;
+//
+//    // Report FPS every second
+//    fps_time_counter += elapsed;
+//    fps_updates++;
+//    if (fps_time_counter >= fps_interval_ms)
+//    {
+//        fps_time_counter -= fps_interval_ms;
+//        double fps = 1.0 * fps_updates / fps_interval_ms * 1000;
+//        Serial.printf("FPS: %.2f\r\n", fps);
+//        fps_updates = 0;
+//    }
+//
+//    // Toggle LED refresh indicator
+//    digitalWrite(LED_REFRESH, led_refresh_on = !led_refresh_on);
+//
+//    // Loop through each multiplexer state
+//    for (int i = 0; i < PINS_PER_MUX; i++)
+//    {
+//        // Set select pins
+//        for (int j = 0; j < NUM_MUX_SEL; j++)
+//        {
+//            // i >> j is the jth bit of i
+//            digitalWrite(MUX_SEL_OUT[j], (i >> j) & 1);
+//        }
+//
+//        // Read four input pins from the multiplexer
+//        for (int j = 0; j < NUM_MUX; j++)
+//        {
+//            int note_id = j * PINS_PER_MUX + i;
+//            if (note_id >= NUM_NOTES) break;
+//
+//            // Read the analog input
+//            u32 v = analogRead(MUX_IN[j]);
+//            if (v != lasts[note_id])
+//            {
+//                // Serial prints are really slow, so don't use them in debug mode
+//                // Serial.printf("%s %d\r\n", notes[note_id].name, v);
+//                on_sensor_update(note_id, time, lasts[note_id], v);
+//            }
+//            lasts[note_id] = v;
+//        }
+//    }
+//}

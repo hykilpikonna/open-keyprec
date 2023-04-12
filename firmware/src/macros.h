@@ -8,7 +8,9 @@
 #define timeMillis() std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()
 //#define timeMillis() HAL_GetTick()
 #define min(a, b) ((a) < (b) ? (a) : (b))
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define abs(a) ((a) < 0 ? -(a) : (a))
 #define let auto
-#define val const auto
+//#define val const auto
 
 #endif //FIRMWARE_MACROS_H
