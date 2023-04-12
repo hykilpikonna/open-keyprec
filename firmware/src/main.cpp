@@ -1,10 +1,7 @@
 #include <Arduino.h>
 #include <chrono>
-#include <cinttypes>
 #include "macros.h"
 #include "config.h"
-
-#include "stm32f4xx_hal.h"
 
 // ========================================
 // Code
@@ -39,7 +36,6 @@ let led_refresh_on = false;
 
 void setup()
 {
-    HAL_Init();
 
     // Initialize pin and serial
     for (int pin: MUX_IN) pinMode(pin, INPUT);
