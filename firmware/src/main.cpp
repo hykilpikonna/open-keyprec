@@ -90,10 +90,24 @@ void on_sensor_update(int id, u64 time, u32 last, u32 current)
     }
 }
 
+u64 fps_time_counter = 0;
+u32 fps_updates = 0;
+u32 fps_interval_ms = 1000;
+
 void loop()
 {
     u64 time = timeMillis();
     u64 elapsed = time - start_time;
+
+    // Report FPS every second
+    fps_time_counter += elapsed;
+    fps_updates++;
+    if (fps_time_counter >= fps_interval_ms)
+    {
+        fps_time_counter -= fps_interval_ms;
+        double fps = 1.0 * fps_updates / fps_interval_ms * 1000;
+        Serial.printf("FPS: %.2f\r\n", fps);
+    }
 
     // Toggle LED refresh indicator
     digitalWrite(LED_REFRESH, led_refresh_on = !led_refresh_on);
