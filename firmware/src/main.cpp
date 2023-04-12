@@ -179,7 +179,7 @@ int multisampleRead(int pin, int samples)
     return (int) round(((double) sum) / samples);
 }
 
-void loop()
+void loopPanel()
 {
     const auto hue_interval = 512;
     last_hue += hue_interval;
@@ -250,51 +250,57 @@ void loop()
     p_led_rotary.show();
 }
 
-//void loop()
-//{
-//    u64 time = timeMillis();
-//    u64 elapsed = time - last_refresh_time;
-//    last_refresh_time = time;
-//
-//    // Report FPS every second
-//    fps_time_counter += elapsed;
-//    fps_updates++;
-//    if (fps_time_counter >= fps_interval_ms)
-//    {
-//        fps_time_counter -= fps_interval_ms;
-//        double fps = 1.0 * fps_updates / fps_interval_ms * 1000;
-//        Serial.printf("FPS: %.2f\r\n", fps);
-//        fps_updates = 0;
-//    }
-//
-//    // Toggle LED refresh indicator
-//    digitalWrite(LED_REFRESH, led_refresh_on = !led_refresh_on);
-//
-//    // Loop through each multiplexer state
-//    for (int i = 0; i < PINS_PER_MUX; i++)
-//    {
-//        // Set select pins
-//        for (int j = 0; j < NUM_MUX_SEL; j++)
-//        {
-//            // i >> j is the jth bit of i
-//            digitalWrite(MUX_SEL_OUT[j], (i >> j) & 1);
-//        }
-//
-//        // Read four input pins from the multiplexer
-//        for (int j = 0; j < NUM_MUX; j++)
-//        {
-//            int note_id = j * PINS_PER_MUX + i;
-//            if (note_id >= NUM_NOTES) break;
-//
-//            // Read the analog input
-//            u32 v = analogRead(MUX_IN[j]);
-//            if (v != lasts[note_id])
-//            {
-//                // Serial prints are really slow, so don't use them in debug mode
-//                // Serial.printf("%s %d\r\n", notes[note_id].name, v);
-//                on_sensor_update(note_id, time, lasts[note_id], v);
-//            }
-//            lasts[note_id] = v;
-//        }
-//    }
-//}
+void loopKeyboard()
+{
+    u64 time = timeMillis();
+    u64 elapsed = time - last_refresh_time;
+    last_refresh_time = time;
+
+    // Report FPS every second
+    fps_time_counter += elapsed;
+    fps_updates++;
+    if (fps_time_counter >= fps_interval_ms)
+    {
+        fps_time_counter -= fps_interval_ms;
+        double fps = 1.0 * fps_updates / fps_interval_ms * 1000;
+        Serial.printf("FPS: %.2f\r\n", fps);
+        fps_updates = 0;
+    }
+
+    // Toggle LED refresh indicator
+    digitalWrite(LED_REFRESH, led_refresh_on = !led_refresh_on);
+
+    // Loop through each multiplexer state
+    for (int i = 0; i < PINS_PER_MUX; i++)
+    {
+        // Set select pins
+        for (int j = 0; j < NUM_MUX_SEL; j++)
+        {
+            // i >> j is the jth bit of i
+            digitalWrite(MUX_SEL_OUT[j], (i >> j) & 1);
+        }
+
+        // Read four input pins from the multiplexer
+        for (int j = 0; j < NUM_MUX; j++)
+        {
+            int note_id = j * PINS_PER_MUX + i;
+            if (note_id >= NUM_NOTES) break;
+
+            // Read the analog input
+            u32 v = analogRead(MUX_IN[j]);
+            if (v != lasts[note_id])
+            {
+                // Serial prints are really slow, so don't use them in debug mode
+                // Serial.printf("%s %d\r\n", notes[note_id].name, v);
+                on_sensor_update(note_id, time, lasts[note_id], v);
+            }
+            lasts[note_id] = v;
+        }
+    }
+}
+
+void loop()
+{
+    loopKeyboard();
+    loopPanel();
+}
