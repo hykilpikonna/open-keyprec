@@ -4,6 +4,9 @@
 #include "config.h"
 #include "Adafruit_NeoPixel.h"
 #include "Encoder.h"
+#include "main.h"
+#include <FreeRTOS.h>
+#include <task.h>
 
 // ========================================
 // Code
@@ -62,6 +65,8 @@ u32 pot_states[P_PINS_PER_MUX];
 Encoder *encoders[P_NUM_ROTARY];
 int encoder_states[P_NUM_ROTARY];
 
+TaskHandle_t thread1, thread2;
+
 void setup()
 {
     // Initialize pins
@@ -93,6 +98,9 @@ void setup()
     p_led_key.begin();
     p_led_knob.begin();
     p_led_rotary.begin();
+
+//    xTaskCreate(loopKeyboard, "loopKeyboard", 4096, nullptr, 1, &thread1);
+    xTaskCreate(loopPanel, "loopPanel", 4096, nullptr, 1, &thread2);
 }
 
 /**
@@ -179,7 +187,7 @@ int multisampleRead(int pin, int samples)
     return (int) round(((double) sum) / samples);
 }
 
-void loopPanel()
+void readPanel()
 {
     const auto hue_interval = 512;
     last_hue += hue_interval;
@@ -250,7 +258,16 @@ void loopPanel()
     p_led_rotary.show();
 }
 
-void loopKeyboard()
+[[noreturn]] void loopPanel(void* pvParameters)
+{
+    while (true)
+    {
+        readPanel();
+        taskYIELD();
+    }
+}
+
+void readKeyboard()
 {
     u64 time = timeMillis();
     u64 elapsed = time - last_refresh_time;
@@ -279,6 +296,7 @@ void loopKeyboard()
             // i >> j is the jth bit of i
             digitalWrite(MUX_SEL_OUT[j], (i >> j) & 1);
         }
+        delayMicroseconds(100);
 
         // Read four input pins from the multiplexer
         for (int j = 0; j < NUM_MUX; j++)
@@ -299,8 +317,18 @@ void loopKeyboard()
     }
 }
 
+[[noreturn]] void loopKeyboard(void* pvParameters)
+{
+    while (true)
+    {
+        readKeyboard();
+//        vTaskDelay(pdMS_TO_TICKS(1));
+        taskYIELD();
+    }
+}
+
 void loop()
 {
-    loopKeyboard();
-    loopPanel();
+    readKeyboard();
+//    readPanel();
 }
