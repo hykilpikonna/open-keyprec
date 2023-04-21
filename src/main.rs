@@ -10,7 +10,29 @@ fn start() -> Result<()> {
     let midi_out = MidiOutput::new("MIDI Output")?;
     let mut conn_out = midi_out.create_virtual("Virtual MIDI Output").unwrap();
 
-    let serial_port = serialport::new("/dev/cu.wchusbserial1450", 9600)
+    // List serial devices
+    let ports = serialport::available_ports()?;
+
+    // If there are no ports available, quit
+    if ports.is_empty() {
+        println!("No serial ports found.");
+        exit(0);
+    }
+
+    // Let the user choose a port
+    println!("Available serial ports:");
+    for (i, p) in ports.iter().enumerate() {
+        println!("{}: {}", i, p.port_name);
+    }
+    println!("Choose a port (range 0-{}): ", ports.len() - 1);
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+    let choice = input.trim().parse::<usize>().unwrap();
+    let port = &ports[choice];
+
+    // Open serial port
+    let serial_port = serialport::new(port.port_name.as_str(), 9600)
         .timeout(std::time::Duration::from_millis(10))
         .open()?;
     let mut reader = BufReader::new(serial_port);
