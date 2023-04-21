@@ -7,10 +7,11 @@
 
 u32 lasts[NUM_NOTES];  // variable to store the value coming from the sensor
 u64 last_hit_times[NUM_NOTES];
+u32 bounce_delay = 50; // Minimum time between two hits
 
 let max_sensor = 4096;
 let max_threshold = 2000;
-let active_threshold = 100;  // Minimum value to be considered as a hit
+let active_threshold = 400;  // Minimum value to be considered as a hit
 
 let led_refresh_on = false;
 
@@ -33,34 +34,6 @@ void setup()
     Serial.printf("Initialized\r\n");
 
     panel.begin();
-}
-
-/**
- * Called when the sensor value changes
- *
- * @param id Sensor index
- */
-void on_sensor_update(int id, u64 time, u32 last, u32 current)
-{
-    // If the last value is larger than the current value, check timeout
-    if (last > current && last > active_threshold)
-    {
-        u64 elapsed = time - last_hit_times[id];
-        if (elapsed < 150)
-        {
-            // If the last hit is too close, ignore this hit
-            return;
-        }
-
-        // The last value is a local maximum,
-        // and we read it as the hit strength of our note. Send midi command to the host.
-        // /hit <note> <velocity>
-        Serial.printf("/hit %d %d\r\n", notes[id].midi,
-                      min((last - active_threshold) * 127 / (max_threshold - active_threshold), 127));
-
-        // Update last hit time
-        last_hit_times[id] = time;
-    }
 }
 
 u64 fps_last_update = 0;
@@ -98,7 +71,7 @@ void readKeyboard()
             digitalWrite(MUX_SEL_OUT[j], (i >> j) & 1);
         }
 
-        // Read four input pins from the multiplexer
+        // Read input pins from the multiplexer
         for (int j = 0; j < NUM_MUX; j++)
         {
             int note_id = j * PINS_PER_MUX + i;
@@ -108,11 +81,40 @@ void readKeyboard()
             u32 v = analogRead(MUX_IN[j]);
             if (v != lasts[note_id])
             {
-                // Serial prints are really slow, so don't use them in debug mode
                 on_sensor_update(note_id, time, lasts[note_id], v);
             }
             lasts[note_id] = v;
         }
+    }
+}
+
+/**
+ * Called when the sensor value changes
+ *
+ * @param id Sensor index
+ */
+void on_sensor_update(int id, u64 time, u32 last, u32 current)
+{
+    // If the last hit is too close, ignore this hit
+    let last_hit_time = last_hit_times[id];
+    if (time - last_hit_time < bounce_delay) return;
+
+    // If the value is above the threshold
+    if (current > active_threshold)
+    {
+        // If the last value is below the threshold, it's a new hit
+        if (last < active_threshold)
+        {
+            // Send MIDI message
+            // /hit <note> <velocity>
+            Serial.printf("/hit %d %d\r\n", notes[id].midi,
+                          min((last - active_threshold) * 127 / (max_threshold - active_threshold), 127));
+        }
+    }
+    else if (last > active_threshold)
+    {
+        // Released
+        last_hit_times[id] = time;
     }
 }
 
