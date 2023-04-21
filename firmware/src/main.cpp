@@ -35,7 +35,7 @@ Adafruit_NeoPixel p_led_knob(9, P_LED_KNOB, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel p_led_rotary(9, P_LED_ROTARY, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel lk(LK_NUM_LIGHTS, LK_PIN, NEO_GRB + NEO_KHZ800);
 
-u64 fps_time_counter = 0;
+u64 fps_last_update = 0;
 u32 fps_updates = 0;
 u32 fps_interval_ms = 1000;
 
@@ -49,7 +49,7 @@ u32 pot_states[P_PINS_PER_MUX];
 Encoder *encoders[P_NUM_ROTARY];
 int encoder_states[P_NUM_ROTARY];
 
-TaskHandle_t thread1, thread2;
+TaskHandle_t thread2;
 
 void setup()
 {
@@ -199,7 +199,7 @@ void readPanel()
             // i >> j is the jth bit of i
             digitalWrite(P_MUX_SEL_OUT[j], (i >> j) & 1);
         }
-        delayMicroseconds(100);
+        vTaskDelay(1);
 
         // Read button
         int key = !digitalRead(P_KEY_MUX_IN);
@@ -247,26 +247,26 @@ void readPanel()
     while (true)
     {
         readPanel();
-        taskYIELD();
+    }
+}
+
+void countFps(u64 time)
+{
+    // Report FPS every second
+    fps_updates++;
+    if (time - fps_last_update >= fps_interval_ms)
+    {
+        fps_last_update = time;
+        double fps = 1.0 * fps_updates / fps_interval_ms * 1000;
+        Serial.printf("FPS: %.2f\r\n", fps);
+        fps_updates = 0;
     }
 }
 
 void readKeyboard()
 {
     u64 time = timeMillis();
-    u64 elapsed = time - last_refresh_time;
-    last_refresh_time = time;
-
-    // Report FPS every second
-    fps_time_counter += elapsed;
-    fps_updates++;
-    if (fps_time_counter >= fps_interval_ms)
-    {
-        fps_time_counter -= fps_interval_ms;
-        double fps = 1.0 * fps_updates / fps_interval_ms * 1000;
-        Serial.printf("FPS: %.2f\r\n", fps);
-        fps_updates = 0;
-    }
+    countFps(time);
 
     // Toggle LED refresh indicator
     digitalWrite(LED_REFRESH, led_refresh_on = !led_refresh_on);

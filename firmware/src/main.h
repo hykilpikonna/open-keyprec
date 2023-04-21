@@ -27,6 +27,5 @@ void onPotChange(int id, u8 value);
 int multisampleRead(int pin, int samples);
 
 [[noreturn]] void loopPanel(void* pvParameters);
-[[noreturn]] void loopKeyboard(void* pvParameters);
 
 #endif //FIRMWARE_MAIN_H
