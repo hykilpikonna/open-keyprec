@@ -50,6 +50,7 @@ void pinModeSafe(int pin, int mode)
 Adafruit_NeoPixel p_led_key(4, P_LED_KEY, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel p_led_knob(9, P_LED_KNOB, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel p_led_rotary(9, P_LED_ROTARY, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel lk(LK_NUM_LIGHTS, LK_PIN, NEO_GRB + NEO_KHZ800);
 
 u64 fps_time_counter = 0;
 u32 fps_updates = 0;
@@ -71,6 +72,7 @@ void setup()
 {
     // Initialize pins
     pinModeSafe(LED_REFRESH, OUTPUT);
+    pinModeSafe(LK_PIN, OUTPUT);
     for (int pin: MUX_IN) pinModeSafe(pin, INPUT);
     for (int pin: MUX_SEL_OUT) pinModeSafe(pin, OUTPUT);
     for (int pin: P_MUX_SEL_OUT) pinModeSafe(pin, OUTPUT);
@@ -245,6 +247,11 @@ void readPanel()
         }
     }
 
+    for (int i = 0; i < LK_NUM_LIGHTS; i++)
+    {
+        lk.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue + i * hue_interval, 255, brightness));
+    }
+
 //    for (int i = 0; i < 9; i++)
 //    {
 //        p_led_key.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue + i * hue_interval, 255, brightness));
@@ -256,6 +263,7 @@ void readPanel()
     p_led_key.show();
     p_led_knob.show();
     p_led_rotary.show();
+    lk.show();
 }
 
 [[noreturn]] void loopPanel(void* pvParameters)
