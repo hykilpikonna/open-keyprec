@@ -32,7 +32,7 @@ fn start() -> Result<()> {
     let port = &ports[choice];
 
     // Open serial port
-    let serial_port = serialport::new(port.port_name.as_str(), 9600)
+    let serial_port = serialport::new(port.port_name.as_str(), 115200)
         .timeout(std::time::Duration::from_millis(10))
         .open()?;
     let mut reader = BufReader::new(serial_port);

@@ -1,19 +1,9 @@
 #include <Arduino.h>
-#include <chrono>
-#include "macros.h"
 #include "config.h"
 #include "Adafruit_NeoPixel.h"
-#include "Encoder.h"
 #include "main.h"
-#include <FreeRTOS.h>
-#include <task.h>
-
-// ========================================
-// Code
-// ========================================
-
-u64 start_time = 0;
-u64 last_refresh_time = 0;
+#include "utils.h"
+#include "panel.cpp"
 
 u32 lasts[NUM_NOTES];  // variable to store the value coming from the sensor
 u64 last_hit_times[NUM_NOTES];
@@ -24,32 +14,9 @@ let active_threshold = 100;  // Minimum value to be considered as a hit
 
 let led_refresh_on = false;
 
-void pinModeSafe(int pin, int mode)
-{
-    if (pin == -1) return;
-    pinMode(pin, mode);
-}
-
-Adafruit_NeoPixel p_led_key(4, P_LED_KEY, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel p_led_knob(9, P_LED_KNOB, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel p_led_rotary(9, P_LED_ROTARY, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel lk(LK_NUM_LIGHTS, LK_PIN, NEO_GRB + NEO_KHZ800);
 
-u64 fps_last_update = 0;
-u32 fps_updates = 0;
-u32 fps_interval_ms = 1000;
-
-u16 last_hue = 0;
-u8 brightness = 40;
-
-bool key_states[P_PINS_PER_MUX];
-bool btn_states[P_PINS_PER_MUX];
-u32 pot_states[P_PINS_PER_MUX];
-
-Encoder *encoders[P_NUM_ROTARY];
-int encoder_states[P_NUM_ROTARY];
-
-TaskHandle_t thread2;
+Panel panel;
 
 void setup()
 {
@@ -58,34 +25,14 @@ void setup()
     pinModeSafe(LK_PIN, OUTPUT);
     for (int pin: MUX_IN) pinModeSafe(pin, INPUT);
     for (int pin: MUX_SEL_OUT) pinModeSafe(pin, OUTPUT);
-    for (int pin: P_MUX_SEL_OUT) pinModeSafe(pin, OUTPUT);
-    for (int pin: P_ROTARY_A) pinModeSafe(pin, INPUT);
-    for (int pin: P_ROTARY_B) pinModeSafe(pin, INPUT);
-    pinModeSafe(P_BUTTON_MUX_IN, INPUT);
-    pinModeSafe(P_KEY_MUX_IN, INPUT);
-    pinModeSafe(P_KNOB_MUX_IN, INPUT);
-    pinModeSafe(P_LED_KEY, OUTPUT);
-    pinModeSafe(P_LED_KNOB, OUTPUT);
-    pinModeSafe(P_LED_ROTARY, OUTPUT);
 
-    // Initialize encoders
-    for (int i = 0; i < P_NUM_ROTARY; i++)
-    {
-        encoders[i] = new Encoder(P_ROTARY_A[i], P_ROTARY_B[i]);
-    }
+    lk.begin();
 
     // Initialize serial
-    Serial.begin(9600);
+    Serial.begin(115200);
     Serial.printf("Initialized\r\n");
 
-    start_time = timeMillis();
-
-    p_led_key.begin();
-    p_led_knob.begin();
-    p_led_rotary.begin();
-
-//    xTaskCreate(loopKeyboard, "loopKeyboard", 4096, nullptr, 1, &thread1);
-    xTaskCreate(loopPanel, "loopPanel", 4096, nullptr, 1, &thread2);
+    panel.begin();
 }
 
 /**
@@ -116,139 +63,9 @@ void on_sensor_update(int id, u64 time, u32 last, u32 current)
     }
 }
 
-void onKey(int id, bool state)
-{
-    // Check if it's one of the larger keys (the first 4)
-    if (id < 4)
-    {
-        if (state)
-        {
-            // Set a random color for the key's LED
-            p_led_key.setPixelColor(id, Adafruit_NeoPixel::ColorHSV(random(0, 65535), 255, brightness));
-            p_led_key.show();
-        }
-        else
-        {
-            // Clear the key's LED
-            p_led_key.setPixelColor(id, 0);
-            p_led_key.show();
-        }
-    }
-
-    // Key 5 = clear
-    if (id == 4 && state)
-    {
-        p_led_key.clear();
-        p_led_key.show();
-    }
-
-    Serial.printf("Key changed - id: %d, state: %d\r\n", id, state);
-}
-
-void onBtn(int id, bool state)
-{
-    Serial.printf("Button changed - id: %d, state: %d\r\n", id, state);
-}
-
-void onPotRead(int id, u8 value)
-{
-    // Set LED
-    p_led_knob.setPixelColor(id, Adafruit_NeoPixel::ColorHSV(last_hue, 255, value));
-    p_led_knob.show();
-}
-
-void onPotChange(int id, u8 value)
-{
-    Serial.printf("Potentiometer changed - id: %d, value: %d\r\n", id, value);
-}
-
-int multisampleRead(int pin, int samples)
-{
-    int sum = 0;
-    for (int i = 0; i < samples; ++i)
-    {
-        sum += analogRead(pin);
-    }
-    return (int) round(((double) sum) / samples);
-}
-
-void readPanel()
-{
-    const auto hue_interval = 512;
-    last_hue += hue_interval;
-
-    // Read rotary encoders
-    for (int i = 0; i < P_NUM_ROTARY; ++i)
-    {
-        int state = encoders[i]->read();
-        if (encoder_states[i] != state)
-        {
-            encoder_states[i] = state;
-            Serial.printf("Rotary changed - id: %d, value: %d\r\n", i, state);
-            p_led_rotary.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue, 255, brightness));
-            p_led_rotary.show();
-        }
-    }
-
-    // Read buttons
-    for (int i = 0; i < P_PINS_PER_MUX; ++i)
-    {
-        // Set select pins
-        for (int j = 0; j < P_NUM_MUX_SEL; ++j)
-        {
-            // i >> j is the jth bit of i
-            digitalWrite(P_MUX_SEL_OUT[j], (i >> j) & 1);
-        }
-        vTaskDelay(1);
-
-        // Read button
-        int key = !digitalRead(P_KEY_MUX_IN);
-        int btn = !digitalRead(P_BUTTON_MUX_IN);
-
-        // If the state is changed, call button callback
-        if (key_states[i] != key)
-        {
-            key_states[i] = key;
-            onKey(i, key);
-        }
-
-        if (btn_states[i] != btn)
-        {
-            btn_states[i] = btn;
-            onBtn(i, btn);
-        }
-
-        // Read potentiometer
-        int pot = (int) round(multisampleRead(P_KNOB_MUX_IN, 2) / 16.0);
-        onPotRead(i, pot);
-
-        // If the state is changed, call potentiometer callback
-        if (abs(pot_states[i] - pot) > 4)
-        {
-            pot_states[i] = pot;
-            onPotChange(i, pot);
-        }
-    }
-
-    for (int i = 0; i < LK_NUM_LIGHTS; i++)
-    {
-        lk.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue + i * hue_interval, 255, brightness));
-    }
-
-    delay(10);
-    p_led_key.show();
-    p_led_knob.show();
-    p_led_rotary.show();
-    lk.show();
-}
-
-[[noreturn]] void loopPanel(void* pvParameters)
-{
-    while (true)
-    {
-        readPanel();
-    }
-}
+u64 fps_last_update = 0;
+u32 fps_updates = 0;
+const u32 fps_interval_ms = 1000;
 
 void countFps(u64 time)
 {
@@ -265,7 +82,7 @@ void countFps(u64 time)
 
 void readKeyboard()
 {
-    u64 time = timeMillis();
+    u64 time = millis();
     countFps(time);
 
     // Toggle LED refresh indicator
@@ -302,4 +119,9 @@ void readKeyboard()
 void loop()
 {
     readKeyboard();
+
+//    for (int i = 0; i < LK_NUM_LIGHTS; i++)
+//    {
+//        lk.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue + i * hue_interval, 255, brightness));
+//    }
 }
