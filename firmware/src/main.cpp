@@ -216,7 +216,7 @@ void readPanel()
             // i >> j is the jth bit of i
             digitalWrite(P_MUX_SEL_OUT[j], (i >> j) & 1);
         }
-        delay(1);
+        delayMicroseconds(100);
 
         // Read button
         int key = !digitalRead(P_KEY_MUX_IN);
@@ -251,13 +251,6 @@ void readPanel()
     {
         lk.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue + i * hue_interval, 255, brightness));
     }
-
-//    for (int i = 0; i < 9; i++)
-//    {
-//        p_led_key.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue + i * hue_interval, 255, brightness));
-//        p_led_knob.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue + 16384 + i * hue_interval, 255, brightness));
-//        p_led_rotary.setPixelColor(i, Adafruit_NeoPixel::ColorHSV(last_hue + 32768 + i * hue_interval, 255, brightness));
-//    }
 
     delay(10);
     p_led_key.show();
@@ -304,7 +297,6 @@ void readKeyboard()
             // i >> j is the jth bit of i
             digitalWrite(MUX_SEL_OUT[j], (i >> j) & 1);
         }
-        delayMicroseconds(100);
 
         // Read four input pins from the multiplexer
         for (int j = 0; j < NUM_MUX; j++)
@@ -317,7 +309,6 @@ void readKeyboard()
             if (v != lasts[note_id])
             {
                 // Serial prints are really slow, so don't use them in debug mode
-                // Serial.printf("%s %d\r\n", notes[note_id].name, v);
                 on_sensor_update(note_id, time, lasts[note_id], v);
             }
             lasts[note_id] = v;
@@ -325,18 +316,7 @@ void readKeyboard()
     }
 }
 
-[[noreturn]] void loopKeyboard(void* pvParameters)
-{
-    while (true)
-    {
-        readKeyboard();
-//        vTaskDelay(pdMS_TO_TICKS(1));
-        taskYIELD();
-    }
-}
-
 void loop()
 {
     readKeyboard();
-//    readPanel();
 }
