@@ -23,12 +23,12 @@ const int MUX_SEL_OUT[NUM_MUX_SEL] = {14, 13, 12, 11};
 // LED Light strip
 const int LK_PIN = 2;
 const int LK_LIGHTS_PER_METER = 60;
-const float LK_NUM_METERS = 2;
+constexpr float LK_NUM_METERS = 2;
 const int LK_KEY_SPACING_MM = 7;
 const int LK_KEY_LEN_MM = 30;
 const int LK_OFFSET_MM = 25; // Length in mm from the start of the strip to the first key
 const float LK_LIGHTS_PER_MM = LK_LIGHTS_PER_METER / 1000.0;
-const int LK_NUM_LIGHTS = (int) round(LK_LIGHTS_PER_METER * LK_NUM_METERS);
+constexpr int LK_NUM_LIGHTS = (int) (LK_LIGHTS_PER_METER * LK_NUM_METERS + 0.5);
 
 // ========================================
 // MIDI Panel Pin Configuration
