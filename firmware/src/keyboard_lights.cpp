@@ -13,6 +13,7 @@ class KeyboardLights
 private:
     Adafruit_NeoPixel led_key;
     std::unordered_map<int, int> key_to_light;
+    TaskHandle_t thread{};
 
 public:
     KeyboardLights() : led_key(LK_NUM_LIGHTS, LK_PIN, NEO_GRB + NEO_KHZ800)
@@ -44,6 +45,7 @@ public:
     void begin()
     {
         led_key.begin();
+        xTaskCreate(loop, "loopLights", 4096, this, 1, &thread);
     }
 
     void hit(int key)
@@ -57,5 +59,20 @@ public:
         led_key.setPixelColor(start, Adafruit_NeoPixel::ColorHSV(0, 255, 100));
 
         led_key.show();
+    }
+
+    void update()
+    {
+
+    }
+
+    [[noreturn]] static void loop(void *pv)
+    {
+        auto *lights = (KeyboardLights *) pv;
+
+        while (true)
+        {
+            lights->update();
+        }
     }
 };
