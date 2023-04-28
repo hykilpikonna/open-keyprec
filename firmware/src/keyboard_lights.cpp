@@ -7,13 +7,49 @@
 #include "utils.h"
 #include "Adafruit_NeoPixel.h"
 #include <unordered_map>
+#include <queue>
+
+const int ANIM_QUEUE_SIZE = 100;
+const int FRAME_DELAY_MS = 10;
+
+using namespace std;
 
 class KeyboardLights
 {
 private:
     Adafruit_NeoPixel led_key;
-    std::unordered_map<int, int> key_to_light;
+    unordered_map<int, int> key_to_light;
     TaskHandle_t thread{};
+
+    u32 animation[ANIM_QUEUE_SIZE][LK_NUM_LIGHTS]{};
+    int anim_index = 0;
+
+    void update()
+    {
+        // Render this frame
+        auto frame = animation[anim_index];
+        for (int i = 0; i < LK_NUM_LIGHTS; i++)
+        {
+            led_key.setPixelColor(i, frame[i]);
+        }
+        led_key.show();
+
+        // Clear the current frame
+        for (int i = 0; i < LK_NUM_LIGHTS; i++)
+            animation[anim_index][i] = 0;
+        anim_index = (anim_index + 1) % ANIM_QUEUE_SIZE;
+    }
+
+    [[noreturn]] static void loop(void *pv)
+    {
+        auto *lights = (KeyboardLights *) pv;
+
+        while (true)
+        {
+            lights->update();
+            vTaskDelay(FRAME_DELAY_MS / portTICK_PERIOD_MS);
+        }
+    }
 
 public:
     KeyboardLights() : led_key(LK_NUM_LIGHTS, LK_PIN, NEO_GRB + NEO_KHZ800)
@@ -55,24 +91,10 @@ public:
 
         Serial.printf("Key %d -> Light %d\n", key, start);
 
-        // 2. Set the color of the lights
-        led_key.setPixelColor(start, Adafruit_NeoPixel::ColorHSV(0, 255, 100));
-
-        led_key.show();
-    }
-
-    void update()
-    {
-
-    }
-
-    [[noreturn]] static void loop(void *pv)
-    {
-        auto *lights = (KeyboardLights *) pv;
-
-        while (true)
-        {
-            lights->update();
-        }
+        // 2. Start animation
+//        for (int i = 0; i < 50; i++)
+//        {
+//            animation[(anim_index + i) % ANIM_QUEUE_SIZE][start] = Adafruit_NeoPixel::ColorHSV(0, 255, (50 - i) * 2);
+//        }
     }
 };
