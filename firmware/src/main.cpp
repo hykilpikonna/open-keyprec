@@ -4,6 +4,7 @@
 #include "main.h"
 #include "utils.h"
 #include "panel.cpp"
+#include "keyboard_lights.cpp"
 
 u32 lasts[NUM_NOTES];  // variable to store the value coming from the sensor
 u64 last_hit_times[NUM_NOTES];

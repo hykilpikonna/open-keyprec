@@ -24,6 +24,8 @@ const int MUX_SEL_OUT[NUM_MUX_SEL] = {14, 13, 12, 11};
 const int LK_PIN = 2;
 const int LK_LIGHTS_PER_METER = 60;
 const float LK_NUM_METERS = 2;
+const int LK_KEY_SPACING_MM = 7;
+const int LK_KEY_LEN_MM = 15;
 const int LK_NUM_LIGHTS = (int) round(LK_LIGHTS_PER_METER * LK_NUM_METERS);
 
 // ========================================
