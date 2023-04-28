@@ -2,6 +2,7 @@
 // Created by Hykilpikonna on 4/21/23.
 //
 
+#include <Arduino.h>
 #include "config.h"
 #include "Adafruit_NeoPixel.h"
 
