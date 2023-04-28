@@ -11,7 +11,7 @@ u64 last_hit_times[NUM_NOTES];
 u32 bounce_delay = 50; // Minimum time between two hits
 
 let max_sensor = 4096;
-let max_threshold = 2000;
+let max_threshold = 3000;
 let active_threshold = 400;  // Minimum value to be considered as a hit
 
 let led_refresh_on = false;
@@ -19,6 +19,7 @@ let led_refresh_on = false;
 Adafruit_NeoPixel lk(LK_NUM_LIGHTS, LK_PIN, NEO_GRB + NEO_KHZ800);
 
 Panel panel;
+KeyboardLights keyboardLights;
 
 void setup()
 {
@@ -35,6 +36,7 @@ void setup()
     Serial.printf("Initialized\r\n");
 
     panel.begin();
+    keyboardLights.begin();
 }
 
 u64 fps_last_update = 0;
@@ -109,7 +111,10 @@ void on_sensor_update(int id, u64 time, u32 last, u32 current)
             // Send MIDI message
             // /hit <note> <velocity>
             Serial.printf("/hit %d %d\r\n", notes[id].midi,
-                          min((last - active_threshold) * 127 / (max_threshold - active_threshold), 127));
+                          MIN((last - active_threshold) * 127 / (max_threshold - active_threshold), 127));
+
+            // Lights
+            keyboardLights.hit(id);
         }
     }
     else if (last > active_threshold)

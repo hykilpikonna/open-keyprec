@@ -62,13 +62,6 @@ public:
     }
 
 private:
-    /**
-     * Initialize panel pins, encoders, and start the panel thread
-     */
-    void setupPanel()
-    {
-    }
-
     void readPanel()
     {
         const auto hue_interval = 512;
@@ -120,7 +113,7 @@ private:
             onPotRead(i, pot);
 
             // If the state is changed, call potentiometer callback
-            if (abs(pot_states[i] - pot) > 4)
+            if (ABS(pot_states[i] - pot) > 4)
             {
                 pot_states[i] = pot;
                 onPotChange(i, pot);
