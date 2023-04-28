@@ -4,44 +4,58 @@
 
 #include <Arduino.h>
 #include "config.h"
+#include "utils.h"
 #include "Adafruit_NeoPixel.h"
+#include <unordered_map>
 
 class KeyboardLights
 {
 private:
     Adafruit_NeoPixel led_key;
+    std::unordered_map<int, int> key_to_light;
 
 public:
-    KeyboardLights() : led_key(4, LK_PIN, NEO_GRB + NEO_KHZ800) {}
+    KeyboardLights() : led_key(LK_NUM_LIGHTS, LK_PIN, NEO_GRB + NEO_KHZ800)
+    {
+        // Initialize key to light map
+        int regi = 0;
+        for (int i = NUM_NOTES - 1; i >= 0; i--)
+        {
+            auto note = notes[i];
+            auto ki = (float) regi;
+            if (note.name[1] == '#') ki -= 0.5;
+
+            // Calculate the length from the start of the keyboard to the key
+            ki *= LK_KEY_SPACING_MM + LK_KEY_LEN_MM;
+            ki += LK_KEY_LEN_MM / 2.0; // Center of the key
+
+            // Calculate the index of the light at the same length position
+            ki *= LK_LIGHTS_PER_MM;
+
+            // Convert key index to mm, then to light index
+            key_to_light[i] = (int) round(ki);
+
+            // Increment the regular note index if it's not a sharp note
+            if (note.name[1] != '#') regi++;
+        }
+
+    }
 
     void begin()
     {
         led_key.begin();
     }
 
-    /**
-     * Convert a key index to a light index
-     *
-     * The light strip's spacing doesn't match the keyboard's spacing, so we need to convert.
-     * Light strip info are defined by LK_LIGHTS_PER_METER and LK_NUM_LIGHTS.
-     * Key spacing info are defined by LK_KEY_SPACING_MM and LK_KEY_LEN_MM.
-     *
-     * @param key Key index from 0 to 60
-     * @return Light index
-     */
-    static int keyToLight(int key)
-    {
-        return (int) (key * LK_KEY_SPACING_MM / LK_KEY_LEN_MM * LK_LIGHTS_PER_METER);
-    }
-
     void hit(int key)
     {
         // 1. Calculate the starting index
-        int start = keyToLight(key);
+        int start = key_to_light[key];
 
         Serial.printf("Key %d -> Light %d\n", key, start);
 
         // 2. Set the color of the lights
-        led_key.setPixelColor(start, Adafruit_NeoPixel::ColorHSV(0, 255, 255));
+        led_key.setPixelColor(start, Adafruit_NeoPixel::ColorHSV(0, 255, 100));
+
+        led_key.show();
     }
 };
