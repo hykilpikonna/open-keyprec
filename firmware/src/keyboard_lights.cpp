@@ -24,19 +24,23 @@ private:
     u32 animation[ANIM_QUEUE_SIZE][LK_NUM_LIGHTS]{};
     int anim_index = 0;
 
+    static int wrap(int i) { return (i + LK_NUM_LIGHTS) % LK_NUM_LIGHTS; }
+
     void update()
     {
         // Render this frame
         auto frame = animation[anim_index];
+        auto last_frame = animation[wrap(anim_index - 1)];
         for (int i = 0; i < LK_NUM_LIGHTS; i++)
         {
+            if (frame[i] == 0 && last_frame[i] == 0) continue;
             led_key.setPixelColor(i, frame[i]);
         }
         led_key.show();
 
-        // Clear the current frame
+        // Clear the last frame
         for (int i = 0; i < LK_NUM_LIGHTS; i++)
-            animation[anim_index][i] = 0;
+            last_frame[i] = 0;
         anim_index = (anim_index + 1) % ANIM_QUEUE_SIZE;
     }
 
@@ -75,7 +79,6 @@ public:
             // Increment the regular note index if it's not a sharp note
             if (note.name[1] != '#') regi++;
         }
-
     }
 
     void begin()
