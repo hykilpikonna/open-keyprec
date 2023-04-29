@@ -16,8 +16,6 @@ let active_threshold = 400;  // Minimum value to be considered as a hit
 
 let led_refresh_on = false;
 
-Adafruit_NeoPixel lk(LK_NUM_LIGHTS, LK_PIN, NEO_GRB + NEO_KHZ800);
-
 Panel panel;
 KeyboardLights keyboardLights;
 
@@ -25,11 +23,8 @@ void setup()
 {
     // Initialize pins
     pinModeSafe(LED_REFRESH, OUTPUT);
-    pinModeSafe(LK_PIN, OUTPUT);
     for (int pin: MUX_IN) pinModeSafe(pin, INPUT);
     for (int pin: MUX_SEL_OUT) pinModeSafe(pin, OUTPUT);
-
-    lk.begin();
 
     // Initialize serial
     Serial.begin(115200);

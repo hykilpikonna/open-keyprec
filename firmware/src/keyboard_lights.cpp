@@ -10,7 +10,7 @@
 #include <queue>
 
 const int ANIM_QUEUE_SIZE = 100;
-const int FRAME_DELAY_MS = 10;
+const int FRAME_DELAY_MS = 20;
 
 using namespace std;
 
@@ -83,6 +83,8 @@ public:
 
     void begin()
     {
+        pinModeSafe(LK_PIN, OUTPUT);
+
         led_key.begin();
         xTaskCreate(loop, "loopLights", 4096, this, 1, &thread);
     }
@@ -95,9 +97,31 @@ public:
         Serial.printf("Key %d -> Light %d\n", key, start);
 
         // 2. Start animation
+
+        // Fade out for one light
 //        for (int i = 0; i < 50; i++)
 //        {
 //            animation[(anim_index + i) % ANIM_QUEUE_SIZE][start] = Adafruit_NeoPixel::ColorHSV(0, 255, (50 - i) * 2);
 //        }
+
+        // Fade out from the center to both sides
+        int hue = random(0, 255);
+        for (int i = 0; i < 25; i++)
+        {
+            // Pick a random hue
+            Serial.printf("Hue: %d\n", hue);
+            int v = (25 - i) * 2;
+            int s = 255;
+            auto frame = animation[(anim_index + i) % ANIM_QUEUE_SIZE];
+
+            frame[start] = Adafruit_NeoPixel::ColorHSV(100, s, v);
+
+            // Sides
+            for (int j = 1; j <= min(i, 10); j++)
+            {
+                frame[(start + j) % LK_NUM_LIGHTS] = Adafruit_NeoPixel::ColorHSV(100, s, MAX(v - j * 2, 0));
+                frame[(start - j + LK_NUM_LIGHTS) % LK_NUM_LIGHTS] = Adafruit_NeoPixel::ColorHSV(100, s, MAX(v - j * 2, 0));
+            }
+        }
     }
 };

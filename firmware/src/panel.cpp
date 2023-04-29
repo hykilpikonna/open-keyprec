@@ -169,7 +169,7 @@ private:
 
     void onPotChange(int id, u8 value)
     {
-        Serial.printf("Potentiometer changed - id: %d, value: %d\r\n", id, value);
+//        Serial.printf("Potentiometer changed - id: %d, value: %d\r\n", id, value);
     }
 
     [[noreturn]] static void loopPanel(void* pvParameters)
