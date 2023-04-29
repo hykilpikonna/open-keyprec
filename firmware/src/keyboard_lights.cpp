@@ -22,6 +22,7 @@ private:
     TaskHandle_t thread{};
 
     u32 animation[ANIM_QUEUE_SIZE][LK_NUM_LIGHTS]{};
+    u32 last_frame[LK_NUM_LIGHTS]{};
     int anim_index = 0;
 
     static int wrap(int i) { return (i + LK_NUM_LIGHTS) % LK_NUM_LIGHTS; }
@@ -30,17 +31,16 @@ private:
     {
         // Render this frame
         auto frame = animation[anim_index];
-        auto last_frame = animation[wrap(anim_index - 1)];
         for (int i = 0; i < LK_NUM_LIGHTS; i++)
         {
             if (frame[i] == 0 && last_frame[i] == 0) continue;
+            last_frame[i] = frame[i];
             led_key.setPixelColor(i, frame[i]);
         }
         led_key.show();
 
-        // Clear the last frame
-        for (int i = 0; i < LK_NUM_LIGHTS; i++)
-            last_frame[i] = 0;
+        // Clear the current frame
+        for (int i = 0; i < LK_NUM_LIGHTS; i++) frame[i] = 0;
         anim_index = (anim_index + 1) % ANIM_QUEUE_SIZE;
     }
 
@@ -105,7 +105,7 @@ public:
 //        }
 
         // Fade out from the center to both sides
-        int hue = random(0, 255);
+        int hue = random(0, 65535);
         for (int i = 0; i < 25; i++)
         {
             // Pick a random hue
@@ -114,13 +114,13 @@ public:
             int s = 255;
             auto frame = animation[(anim_index + i) % ANIM_QUEUE_SIZE];
 
-            frame[start] = Adafruit_NeoPixel::ColorHSV(100, s, v);
+            frame[start] = Adafruit_NeoPixel::ColorHSV(hue, s, v);
 
             // Sides
             for (int j = 1; j <= min(i, 10); j++)
             {
-                frame[(start + j) % LK_NUM_LIGHTS] = Adafruit_NeoPixel::ColorHSV(100, s, MAX(v - j * 2, 0));
-                frame[(start - j + LK_NUM_LIGHTS) % LK_NUM_LIGHTS] = Adafruit_NeoPixel::ColorHSV(100, s, MAX(v - j * 2, 0));
+                frame[(start + j) % LK_NUM_LIGHTS] = Adafruit_NeoPixel::ColorHSV(hue, s, MAX(v - j * 2, 0));
+                frame[(start - j + LK_NUM_LIGHTS) % LK_NUM_LIGHTS] = Adafruit_NeoPixel::ColorHSV(hue, s, MAX(v - j * 2, 0));
             }
         }
     }
